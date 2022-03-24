@@ -72,9 +72,12 @@ static ssize_t write_all(int fildes, const void *buf, size_t nbyte) {
 	size_t rem;
 	for (rem = nbyte; rem > 0;) {
 		ssize_t res = write(fildes, buf, rem);
-		if (-1 == res) {
+		if (-1 == res) 
+		{
 			if (EINTR != errno) return res;
-		} else {
+		} 
+		else 
+		{
 			buf = res + (char const*) buf;
 			rem -= res;
 		}
@@ -94,7 +97,8 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 
 	socklen_t servlen;
 
-	if (unixsocket) {
+	if (unixsocket) 
+	{
 		memset(&fcgi_addr_un, 0, sizeof(fcgi_addr_un));
 
 		fcgi_addr_un.sun_family = AF_UNIX;
@@ -138,7 +142,9 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 		}
 
 		close(fcgi_fd);
-	} else {
+	} 
+	else 
+	{
 		memset(&fcgi_addr_in, 0, sizeof(fcgi_addr_in));
 		fcgi_addr_in.sin_family = AF_INET;
 		fcgi_addr_in.sin_port = htons(port);
@@ -184,7 +190,8 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 	}
 
 	val = 1;
-	if (setsockopt(fcgi_fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)) < 0) {
+	if (setsockopt(fcgi_fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)) < 0)	// time_wait状态下端口可以复用
+	{
 		fprintf(stderr, "spawn-fcgi: couldn't set SO_REUSEADDR: %s\n", strerror(errno));
 		close(fcgi_fd);
 		return -1;
@@ -196,7 +203,8 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 		return -1;
 	}
 
-	if (unixsocket) {
+	if (unixsocket) 
+	{
 		if (-1 == chmod(unixsocket, mode)) {
 			fprintf(stderr, "spawn-fcgi: couldn't chmod socket: %s\n", strerror(errno));
 			close(fcgi_fd);
@@ -226,22 +234,29 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 	return fcgi_fd;
 }
 
-static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int fork_count, int child_count, int pid_fd, int nofork) {
+static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int fork_count, int child_count, int pid_fd, int nofork) 
+{
 	int status, rc = 0;
 	struct timeval tv = { 0, 100 * 1000 };
 
 	pid_t child;
 
-	while (fork_count-- > 0) {
+	while (fork_count-- > 0)
+	{
 
-		if (!nofork) {
+		if (!nofork) 
+		{
 			child = fork();
-		} else {
+		} 
+		else 
+		{
 			child = 0;
 		}
 
-		switch (child) {
-		case 0: {
+		switch (child) 
+		{
+		case 0: 
+		{
 			char cgi_childs[64];
 			int max_fd = 0;
 
@@ -267,7 +282,8 @@ static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int
 					if (max_fd != STDOUT_FILENO) dup2(max_fd, STDOUT_FILENO);
 					if (max_fd != STDERR_FILENO) dup2(max_fd, STDERR_FILENO);
 					if (max_fd != STDOUT_FILENO && max_fd != STDERR_FILENO) close(max_fd);
-				} else {
+				} 
+				else {
 					fprintf(stderr, "spawn-fcgi: couldn't open and redirect stdout/stderr to '/dev/null': %s\n", strerror(errno));
 				}
 			}
@@ -281,7 +297,8 @@ static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int
 			if (appArgv) {
 				execv(appArgv[0], appArgv);
 
-			} else {
+			} 
+			else {
 				char *b = malloc((sizeof("exec ") - 1) + strlen(appPath) + 1);
 				strcpy(b, "exec ");
 				strcat(b, appPath);
@@ -338,17 +355,19 @@ static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int
 			case -1:
 				break;
 			default:
-				if (WIFEXITED(status)) {
-					fprintf(stderr, "spawn-fcgi: child exited with: %d\n",
-						WEXITSTATUS(status));
+				if (WIFEXITED(status)) 
+				{
+					fprintf(stderr, "spawn-fcgi: child exited with: %d\n", WEXITSTATUS(status));
 					rc = WEXITSTATUS(status);
-				} else if (WIFSIGNALED(status)) {
-					fprintf(stderr, "spawn-fcgi: child signaled: %d\n",
-						WTERMSIG(status));
+				} 
+				else if (WIFSIGNALED(status)) 
+				{
+					fprintf(stderr, "spawn-fcgi: child signaled: %d\n", WTERMSIG(status));
 					rc = 1;
-				} else {
-					fprintf(stderr, "spawn-fcgi: child died somehow: exit status = %d\n",
-						status);
+				} 
+				else 
+				{
+					fprintf(stderr, "spawn-fcgi: child died somehow: exit status = %d\n", status);
 					rc = status;
 				}
 			}
@@ -357,7 +376,8 @@ static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int
 		}
 	}
 
-	if (-1 != pid_fd) {
+	if (-1 != pid_fd) 
+	{
 		close(pid_fd);
 	}
 
@@ -375,7 +395,8 @@ static int find_user_group(const char *user, const char *group, uid_t *uid, gid_
 	*uid = 0; *gid = 0;
 	if (username) *username = NULL;
 
-	if (user) {
+	if (user) 
+	{
 		my_uid = strtol(user, &endptr, 10);
 
 		if (my_uid <= 0 || *endptr) {
@@ -391,7 +412,8 @@ static int find_user_group(const char *user, const char *group, uid_t *uid, gid_
 			}
 
 			if (username) *username = user;
-		} else {
+		} 
+		else {
 			my_pwd = getpwuid(my_uid);
 			if (username && my_pwd) *username = my_pwd->pw_name;
 		}
@@ -412,7 +434,8 @@ static int find_user_group(const char *user, const char *group, uid_t *uid, gid_
 				return -1;
 			}
 		}
-	} else if (my_pwd) {
+	} 
+	else if (my_pwd) {
 		my_gid = my_pwd->pw_gid;
 
 		if (my_gid == 0) {
@@ -426,10 +449,9 @@ static int find_user_group(const char *user, const char *group, uid_t *uid, gid_
 	return 0;
 }
 
-static void show_version () {
-	(void) write_all(1, CONST_STR_LEN(
-		PACKAGE_DESC
-	));
+static void show_version () 
+{
+	(void) write_all(1, CONST_STR_LEN(PACKAGE_DESC));
 }
 
 static void show_help () {
@@ -468,15 +490,17 @@ static void show_help () {
 }
 
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) 
+{
 	char *fcgi_app = NULL, *changeroot = NULL, *username = NULL,
 	     *groupname = NULL, *unixsocket = NULL, *pid_file = NULL,
 	     *sockusername = NULL, *sockgroupname = NULL, *fcgi_dir = NULL,
 	     *addr = NULL;
+	
 	char **fcgi_app_argv = { NULL };
 	char *endptr = NULL;
 	unsigned short port = 0;
-	mode_t sockmode =  (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) & ~read_umask();
+	mode_t sockmode =  (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) & ~read_umask();	// 设置文件权限 所有者可读写|用户组可读写
 	int child_count = -1;
 	int fork_count = 1;
 	int backlog = 1024;
@@ -484,7 +508,7 @@ int main(int argc, char **argv) {
 	int pid_fd = -1;
 	int nofork = 0;
 	int sockbeforechroot = 0;
-	struct sockaddr_un un;
+	struct sockaddr_un un;	// unix socket
 	int fcgi_fd = -1;
 
 	if (argc < 2) { /* no arguments given */
@@ -492,10 +516,12 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	i_am_root = (getuid() == 0);
+	i_am_root = (getuid() == 0);	// 获得实际用户id, root uid == 0
 
-	while (-1 != (o = getopt(argc, argv, "c:d:f:g:?hna:p:b:u:vC:F:s:P:U:G:M:S"))) {
-		switch(o) {
+	while (-1 != (o = getopt(argc, argv, "c:d:f:g:?hna:p:b:u:vC:F:s:P:U:G:M:S"))) 
+	{
+		switch(o) 
+		{
 		case 'f': fcgi_app = optarg; break;
 		case 'd': fcgi_dir = optarg; break;
 		case 'a': addr = optarg;/* ip addr */ break;
@@ -539,7 +565,9 @@ int main(int argc, char **argv) {
 	if (0 == port && NULL == unixsocket) {
 		fprintf(stderr, "spawn-fcgi: no socket given (use either -p or -s)\n");
 		return -1;
-	} else if (0 != port && NULL != unixsocket) {
+	} 
+	else if (0 != port && NULL != unixsocket) 
+	{
 		fprintf(stderr, "spawn-fcgi: either a Unix domain socket or a TCP-port, but not both\n");
 		return -1;
 	}
@@ -557,39 +585,34 @@ int main(int argc, char **argv) {
 
 	if (nofork) pid_file = NULL; /* ignore pid file in no-fork mode */
 
-	if (pid_file &&
-	    (-1 == (pid_fd = open(pid_file, O_WRONLY | O_CREAT | O_EXCL | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)))) {
+	if (pid_file && (-1 == (pid_fd = open(pid_file, O_WRONLY | O_CREAT | O_EXCL | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH))) ) 
+	{
 		struct stat st;
 		if (errno != EEXIST) {
-			fprintf(stderr, "spawn-fcgi: opening PID-file '%s' failed: %s\n",
-				pid_file, strerror(errno));
+			fprintf(stderr, "spawn-fcgi: opening PID-file '%s' failed: %s\n", pid_file, strerror(errno));
 			return -1;
 		}
 
 		/* ok, file exists */
-
 		if (0 != stat(pid_file, &st)) {
-			fprintf(stderr, "spawn-fcgi: stating PID-file '%s' failed: %s\n",
-				pid_file, strerror(errno));
+			fprintf(stderr, "spawn-fcgi: stating PID-file '%s' failed: %s\n", pid_file, strerror(errno));
 			return -1;
 		}
 
 		/* is it a regular file ? */
-
 		if (!S_ISREG(st.st_mode)) {
-			fprintf(stderr, "spawn-fcgi: PID-file exists and isn't regular file: '%s'\n",
-				pid_file);
+			fprintf(stderr, "spawn-fcgi: PID-file exists and isn't regular file: '%s'\n", pid_file);
 			return -1;
 		}
 
 		if (-1 == (pid_fd = open(pid_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH))) {
-			fprintf(stderr, "spawn-fcgi: opening PID-file '%s' failed: %s\n",
-				pid_file, strerror(errno));
+			fprintf(stderr, "spawn-fcgi: opening PID-file '%s' failed: %s\n", pid_file, strerror(errno));
 			return -1;
 		}
 	}
 
-	if (i_am_root) {
+	if (i_am_root) 
+	{
 		uid_t uid, sockuid;
 		gid_t gid, sockgid;
 		const char* real_username;
@@ -651,7 +674,9 @@ int main(int argc, char **argv) {
 				return -1;
 			}
 		}
-	} else {
+	} 
+	else 
+	{
 		if (-1 == (fcgi_fd = bind_socket(addr, port, unixsocket, 0, 0, sockmode, backlog)))
 			return -1;
 	}
