@@ -162,19 +162,24 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 		if (addr == NULL) {
 			fcgi_addr_in.sin_addr.s_addr = htonl(INADDR_ANY);
 #ifdef HAVE_INET_PTON
-		} else if (1 == inet_pton(AF_INET, addr, &fcgi_addr_in.sin_addr)) {
+		} 
+		else if (1 == inet_pton(AF_INET, addr, &fcgi_addr_in.sin_addr)) {
 			/* nothing to do */
 #ifdef HAVE_IPV6
-		} else if (1 == inet_pton(AF_INET6, addr, &fcgi_addr_in6.sin6_addr)) {
+		} 
+		else if (1 == inet_pton(AF_INET6, addr, &fcgi_addr_in6.sin6_addr)) {
 			servlen = sizeof(fcgi_addr_in6);
 			socket_type = AF_INET6;
 			fcgi_addr = (struct sockaddr *) &fcgi_addr_in6;
 #endif
-		} else {
+		} 
+		else {
 			fprintf(stderr, "spawn-fcgi: '%s' is not a valid IP address\n", addr);
 			return -1;
 #else
-		} else {
+		} 
+		else 
+		{
 			if ((in_addr_t)(-1) == (fcgi_addr_in.sin_addr.s_addr = inet_addr(addr))) {
 				fprintf(stderr, "spawn-fcgi: '%s' is not a valid IPv4 address\n", addr);
 				return -1;
@@ -205,17 +210,20 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 
 	if (unixsocket) 
 	{
-		if (-1 == chmod(unixsocket, mode)) {
+		if (-1 == chmod(unixsocket, mode)) 
+		{
 			fprintf(stderr, "spawn-fcgi: couldn't chmod socket: %s\n", strerror(errno));
 			close(fcgi_fd);
 			unlink(unixsocket);
 			return -1;
 		}
 
-		if (0 != uid || 0 != gid) {
+		if (0 != uid || 0 != gid)
+		{
 			if (0 == uid) uid = -1;
 			if (0 == gid) gid = -1;
-			if (-1 == chown(unixsocket, uid, gid)) {
+			if (-1 == chown(unixsocket, uid, gid)) 
+			{
 				fprintf(stderr, "spawn-fcgi: couldn't chown socket: %s\n", strerror(errno));
 				close(fcgi_fd);
 				unlink(unixsocket);
@@ -224,7 +232,8 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 		}
 	}
 
-	if (-1 == listen(fcgi_fd, backlog)) {
+	if (-1 == listen(fcgi_fd, backlog)) 
+	{
 		fprintf(stderr, "spawn-fcgi: listen failed: %s\n", strerror(errno));
 		close(fcgi_fd);
 		if (unixsocket) unlink(unixsocket);
@@ -274,31 +283,37 @@ static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int
 			}
 
 			/* loose control terminal */
-			if (!nofork) {
+			if (!nofork) 
+			{
 				setsid();
 
 				max_fd = open("/dev/null", O_RDWR);
-				if (-1 != max_fd) {
+				if (-1 != max_fd) 
+				{
 					if (max_fd != STDOUT_FILENO) dup2(max_fd, STDOUT_FILENO);
 					if (max_fd != STDERR_FILENO) dup2(max_fd, STDERR_FILENO);
 					if (max_fd != STDOUT_FILENO && max_fd != STDERR_FILENO) close(max_fd);
 				} 
-				else {
+				else 
+				{
 					fprintf(stderr, "spawn-fcgi: couldn't open and redirect stdout/stderr to '/dev/null': %s\n", strerror(errno));
 				}
 			}
 
 			/* we don't need the client socket */
-			for (i = 3; i < max_fd; i++) {
+			for (i = 3; i < max_fd; i++) 
+			{
 				if (i != FCGI_LISTENSOCK_FILENO) close(i);
 			}
 
 			/* fork and replace shell */
-			if (appArgv) {
+			if (appArgv) 
+			{
 				execv(appArgv[0], appArgv);
 
 			} 
-			else {
+			else 
+			{
 				char *b = malloc((sizeof("exec ") - 1) + strlen(appPath) + 1);
 				strcpy(b, "exec ");
 				strcat(b, appPath);
@@ -522,7 +537,7 @@ int main(int argc, char **argv)
 	{
 		switch(o) 
 		{
-		case 'f': fcgi_app = optarg; break;
+		case 'f': fcgi_app = optarg; break; /*fcgi应用程序bin文件*/
 		case 'd': fcgi_dir = optarg; break;
 		case 'a': addr = optarg;/* ip addr */ break;
 		case 'p': port = strtol(optarg, &endptr, 10);/* port */
@@ -553,6 +568,7 @@ int main(int argc, char **argv)
 		}
 	}
 
+	// 通过getopt()读取完后剩下的参数
 	if (optind < argc) {
 		fcgi_app_argv = &argv[optind];
 	}
@@ -653,7 +669,8 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if (changeroot) {
+		if (changeroot) 
+		{
 			if (-1 == chroot(changeroot)) {
 				fprintf(stderr, "spawn-fcgi: chroot('%s') failed: %s\n", changeroot, strerror(errno));
 				return -1;
@@ -681,7 +698,8 @@ int main(int argc, char **argv)
 			return -1;
 	}
 
-	if (fcgi_dir && -1 == chdir(fcgi_dir)) {
+	if (fcgi_dir && -1 == chdir(fcgi_dir)) 
+	{
 		fprintf(stderr, "spawn-fcgi: chdir('%s') failed: %s\n", fcgi_dir, strerror(errno));
 		return -1;
 	}
