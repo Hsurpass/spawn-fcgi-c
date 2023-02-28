@@ -277,22 +277,22 @@ static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int
 			}
 
 			if(fcgi_fd != FCGI_LISTENSOCK_FILENO) {
-				close(FCGI_LISTENSOCK_FILENO);
-				dup2(fcgi_fd, FCGI_LISTENSOCK_FILENO);
-				close(fcgi_fd);
+				close(FCGI_LISTENSOCK_FILENO);	// 关闭标准输入file_struct
+				dup2(fcgi_fd, FCGI_LISTENSOCK_FILENO);	// 重定向标准输入到监听套接字
+				close(fcgi_fd);	//引用计数减一
 			}
 
 			/* loose control terminal */
 			if (!nofork) 
 			{
-				setsid();
+				setsid();	//建立新的会话，脱离父进程和控制终端，成为守护进程。
 
 				max_fd = open("/dev/null", O_RDWR);
-				if (-1 != max_fd) 
+				if (-1 != max_fd) //因为已经失去控制终端，再操作1，2没有意义，只保留0作为监听套接字
 				{
-					if (max_fd != STDOUT_FILENO) dup2(max_fd, STDOUT_FILENO);
-					if (max_fd != STDERR_FILENO) dup2(max_fd, STDERR_FILENO);
-					if (max_fd != STDOUT_FILENO && max_fd != STDERR_FILENO) close(max_fd);
+					if (max_fd != STDOUT_FILENO) dup2(max_fd, STDOUT_FILENO);	// 重定向标准输出到/dev/null
+					if (max_fd != STDERR_FILENO) dup2(max_fd, STDERR_FILENO);	// 重定向标准错误到/dev/null
+					if (max_fd != STDOUT_FILENO && max_fd != STDERR_FILENO) close(max_fd);	//引用计数减1
 				} 
 				else 
 				{
@@ -300,13 +300,13 @@ static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int
 				}
 			}
 
-			/* we don't need the client socket */
+			/* we don't need the client socket */	// 关闭其他fd。
 			for (i = 3; i < max_fd; i++) 
 			{
 				if (i != FCGI_LISTENSOCK_FILENO) close(i);
 			}
 
-			/* fork and replace shell */
+			/* fork and replace shell */	//执行新的程序
 			if (appArgv) 
 			{
 				execv(appArgv[0], appArgv);
@@ -341,7 +341,7 @@ static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int
 			select(0, NULL, NULL, NULL, &tv);
 
 			switch (waitpid(child, &status, WNOHANG)) {
-			case 0:
+			case 0:	// 没有子进程退出返回0
 				fprintf(stdout, "spawn-fcgi: child spawned successfully: PID: %d\n", child);
 
 				/* write pid file */
@@ -366,10 +366,10 @@ static int fcgi_spawn_connection(char *appPath, char **appArgv, int fcgi_fd, int
 					}
 				}
 
+				break;	// 父进程fork出子进程后退出
+			case -1:	// 发生错误返回-1
 				break;
-			case -1:
-				break;
-			default:
+			default:	// 有子进程退出返回子进程PID
 				if (WIFEXITED(status)) 
 				{
 					fprintf(stderr, "spawn-fcgi: child exited with: %d\n", WEXITSTATUS(status));
