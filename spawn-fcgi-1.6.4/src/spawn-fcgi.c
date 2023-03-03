@@ -62,6 +62,9 @@ static int issetugid() {
 
 #define CONST_STR_LEN(s) s, sizeof(s) - 1
 
+// 读取掩码，并不是设置掩码!!! 
+// 由于linux没提供直接读取mask的函数，所以使用umask(0)得到返回值，返回代表前一个掩码的值, 也就是调用umask(0)之前掩码的值。
+// 但是调用umask(0)后掩码，被修改了，所以用umask(mask)再设置回来。
 static mode_t read_umask(void) {
 	mode_t mask = umask(0);
 	umask(mask);
@@ -123,6 +126,7 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 			return -1;
 		}
 
+		// 判断socket是否正在被使用,如果连接成功了说明正在被使用。
 		if (0 == connect(fcgi_fd, fcgi_addr, servlen)) {
 			fprintf(stderr, "spawn-fcgi: socket is already in use, can't spawn\n");
 			close(fcgi_fd);
@@ -218,6 +222,8 @@ static int bind_socket(const char *addr, unsigned short port, const char *unixso
 			return -1;
 		}
 
+		// 如果uid和gid不一致则报错
+		// root用户启动spawn_fcgi没必要修改权限
 		if (0 != uid || 0 != gid)
 		{
 			if (0 == uid) uid = -1;
@@ -429,7 +435,7 @@ static int find_user_group(const char *user, const char *group, uid_t *uid, gid_
 			if (username) *username = user;
 		} 
 		else {
-			my_pwd = getpwuid(my_uid);
+			my_pwd = getpwuid(my_uid);	// 根据uid得到用户名
 			if (username && my_pwd) *username = my_pwd->pw_name;
 		}
 	}
@@ -515,7 +521,7 @@ int main(int argc, char **argv)
 	char **fcgi_app_argv = { NULL };
 	char *endptr = NULL;
 	unsigned short port = 0;
-	mode_t sockmode =  (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) & ~read_umask();	// 设置文件权限 所有者可读写|用户组可读写
+	mode_t sockmode =  (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) & ~read_umask();	// 设置文件权限 所有者可读写|用户组可读写 0110 0110 0000 & (1111 1110 1101)
 	int child_count = -1;
 	int fork_count = 1;
 	int backlog = 1024;
